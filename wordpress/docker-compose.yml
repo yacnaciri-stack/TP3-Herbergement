@@ -1,0 +1,40 @@
+
+# docker-compose.yml : déploiement de WordPress avec sa base de données MariaDB
+# Les deux services sont démarrés ensemble et sont sur le même réseau.
+
+services:
+
+  # Base de données (étape 2 de la doc : créer la base et l'utilisateur)
+  db:
+    image: mariadb:11                 # image officielle MariaDB (la doc demande 10.11 ou plus)
+    container_name: wp-db             # nom du conteneur
+    restart: unless-stopped           # redémarre automatiquement sauf si on l'arrête nous-mêmes
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass_tp   # mot de passe administrateur de MariaDB
+      MARIADB_DATABASE: wordpress          # base créée au premier démarrage
+      MARIADB_USER: wpuser                 # utilisateur créé pour WordPress
+      MARIADB_PASSWORD: wppass_tp          # mot de passe de cet utilisateur
+    volumes:
+      - db_data:/var/lib/mysql        # volume : les données de la base survivent au conteneur
+
+  # Serveur web + PHP + fichiers WordPress (étapes 1 et 4 de la doc)
+  wordpress:
+    image: wordpress:latest           # image officielle : Apache + PHP + WordPress
+    container_name: wp-site
+    restart: unless-stopped
+    depends_on:
+      - db                            # démarre la base avant WordPress
+    ports:
+      - "8081:80"                     # port 8081 du serveur -> port 80 du conteneur
+    environment:                      # valeurs de wp-config.php (étape 3 de la doc)
+      WORDPRESS_DB_HOST: db           # DB_HOST : nom du service de la base
+      WORDPRESS_DB_NAME: wordpress    # DB_NAME : doit être égal à MARIADB_DATABASE
+      WORDPRESS_DB_USER: wpuser       # DB_USER : doit être égal à MARIADB_USER
+      WORDPRESS_DB_PASSWORD: wppass_tp  # DB_PASSWORD : doit être égal à MARIADB_PASSWORD
+    volumes:
+      - wp_data:/var/www/html         # volume : fichiers WordPress (thèmes, plugins, images)
+
+# Déclaration des volumes utilisés ci-dessus
+volumes:
+  db_data:
+  wp_data:
